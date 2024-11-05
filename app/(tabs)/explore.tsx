@@ -1,102 +1,216 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Image, Platform } from 'react-native';
+// TabTwoScreen.tsx
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  FlatList,
+  TouchableOpacity,
+  Linking,
+  Text,
+  Button,
+  ActivityIndicator,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useStateManagement } from '@/components/StateManagment'; // Import your state management
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
 export default function TabTwoScreen() {
+  const { state } = useStateManagement(); // Access the current items
+  const [recipes, setRecipes] = useState<any[]>([]); // State to hold recipes
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(false);
+
+  // Function to fetch recipes from the API
+  const fetchRecipes = async () => {
+    setLoading(true);
+    try {
+      // Extract item names from state
+      const itemNames = state.items.map((item) => item.name);
+
+      // Make API request
+      const response = await fetch('https://5e9f-46-125-249-116.ngrok-free.app/searchi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: itemNames }),
+      });
+
+      // Parse the response as JSON
+      const data = await response.json();
+
+      // Parse the API response
+      const parsedRecipes = parseApiResponse(data);
+
+      setRecipes(parsedRecipes);
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to parse the API response
+  const parseApiResponse = (data: any) => {
+    try {
+      const ingredientsData = data.ingredients;
+      const directionsData = data.directions;
+      const titlesData = data.titles;
+
+      const recipesList: any[] = [];
+
+      // directionsData and titlesData are now objects, no need to JSON.parse
+      const directionsArray = directionsData;
+      const titlesArray = titlesData;
+
+      // Loop through the recipes
+      for (let i = 0; i < directionsArray.ids.length; i++) {
+        // Access the data directly
+        const directionItem = {
+          id: directionsArray.ids[i],
+          document: directionsArray.documents[i],
+          metadatas: directionsArray.metadatas[i],
+        };
+
+        const titleItem = {
+          id: titlesArray.ids[i],
+          document: titlesArray.documents[i],
+        };
+
+        const ingredientItem = ingredientsData.documents[0][i];
+
+        // Parse the documents if they are JSON strings
+        const directions = JSON.parse(directionItem.document);
+        const ingredients = JSON.parse(ingredientItem);
+
+        const recipe = {
+          id: directionItem.id,
+          title: titleItem.document,
+          directions: directions,
+          link: directionItem.metadatas.link,
+          ingredients: ingredients,
+        };
+        recipesList.push(recipe);
+      }
+
+      return recipesList;
+    } catch (error) {
+      console.error('Error parsing API response:', error);
+      return [];
+    }
+  };
+
+  // Function to check if an ingredient is in the user's items
+  const hasIngredient = (ingredient: string) => {
+    // Normalize the ingredient
+    const normalizedIngredient = ingredient.toLowerCase().trim();
+
+    // Check if any of the user's items match this ingredient
+    return state.items.some((item) => {
+      const normalizedItemName = item.name.toLowerCase().trim();
+      return normalizedIngredient.includes(normalizedItemName);
+    });
+  };
+
+  // Function to toggle expanded items
+  const toggleItem = (index: number) => {
+    const newExpandedItems = new Set(expandedItems);
+    if (newExpandedItems.has(index)) {
+      newExpandedItems.delete(index);
+    } else {
+      newExpandedItems.add(index);
+    }
+    setExpandedItems(newExpandedItems);
+  };
+
+  // Function to open the recipe link
+  const openLink = (url: string) => {
+    Linking.openURL(url.startsWith('http') ? url : `http://${url}`);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={<Ionicons size={310} name="code-slash" style={styles.headerImage} />}>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText> library
-          to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <ThemedView style={styles.container}>
+      <ThemedText style={styles.title}>Recipes</ThemedText>
+      <Button title="Find Recipes" onPress={fetchRecipes} />
+      {loading && <ActivityIndicator size="large" style={styles.loading} />}
+      <FlatList
+        data={recipes}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item, index }) => (
+          <View style={styles.itemContainer}>
+            <TouchableOpacity onPress={() => toggleItem(index)}>
+              <ThemedText style={styles.itemTitle}>{item.title}</ThemedText>
+            </TouchableOpacity>
+            {expandedItems.has(index) && (
+              <View style={styles.expandedContent}>
+                <ThemedText style={styles.sectionTitle}>Ingredients:</ThemedText>
+                {item.ingredients.map((ingredient: string, idx: number) => {
+                  const hasItem = hasIngredient(ingredient);
+                  return (
+                    <View key={idx} style={styles.ingredientItem}>
+                      <Ionicons
+                        name="ellipse"
+                        size={12}
+                        color={hasItem ? 'green' : 'orange'}
+                        style={styles.dotIcon}
+                      />
+                      <ThemedText style={styles.textItem}>{ingredient}</ThemedText>
+                    </View>
+                  );
+                })}
+                <ThemedText style={styles.sectionTitle}>Directions:</ThemedText>
+                {item.directions.map((direction: string, idx: number) => (
+                  <ThemedText key={idx} style={styles.textItem}>
+                    {direction}
+                  </ThemedText>
+                ))}
+                <Button title="Go to Page" onPress={() => openLink(item.link)} />
+              </View>
+            )}
+          </View>
+        )}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    padding: 16,
   },
-  titleContainer: {
+  loading: {
+    marginVertical: 20,
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 16,
+  },
+  itemContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    paddingVertical: 8,
+  },
+  itemTitle: {
+    fontSize: 18,
+  },
+  expandedContent: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    marginTop: 8,
+    fontWeight: 'bold',
+  },
+  ingredientItem: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    marginVertical: 2,
+  },
+  dotIcon: {
+    marginRight: 8,
+  },
+  textItem: {
+    fontSize: 14,
   },
 });
