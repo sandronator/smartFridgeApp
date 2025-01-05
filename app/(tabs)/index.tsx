@@ -108,7 +108,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-<<<<<<< HEAD
     marginTop: 30,
     flex: 1,
     padding: 10,
@@ -136,29 +135,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-=======
-    flex: 1,
-    padding: 20,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
-  itemContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
->>>>>>> origin/main
   },
   itemText: {
     fontSize: 18,
   },
-<<<<<<< HEAD
   itemTextExpanded: {
     fontWeight: "bold",
   },
@@ -169,6 +149,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
   },
-=======
->>>>>>> origin/main
 });
