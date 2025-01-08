@@ -140,8 +140,10 @@ export default function TabTwoScreen() {
           }
         );
         data = await response.json();
+
         // Parse the API response
         const parsedRecipes = parseApiResponse(data);
+        console.log("parsedReceipes: ", parsedRecipes);
         setRecipes(parsedRecipes);
       } else if (searchType === "cheapest") {
         setCheapestTriggered(true);
@@ -191,7 +193,7 @@ export default function TabTwoScreen() {
             }),
           }
         );
-        parseApiResponse(response);
+        parseEndpointV2(response);
       }
     } catch (error) {
       console.error("Error fetching recipes:", error);
@@ -214,69 +216,72 @@ export default function TabTwoScreen() {
   };
 
   // Function to parse the API response for normal search
-  const parseApiResponse = (datas: any) => {
-    let recipesList: any[] = [];
-    let ingredientsData = null;
-    let directionData = null;
-    let titlesData = null;
-    console.log("datalength: ", datas.length);
-    console.log("datas: ", datas);
+  const parseApiResponse = (datas) => {
+    let recipesList = [];
+    let aiResults_raw_list = [];
 
-    for (let value of Object.values(datas)) {
-      console.log("value", value);
-      if (value === "ingredients") {
-        ingredientsData = value;
+    // Outer loop: for each "recipe block" in datas
+    for (let [key, value] of Object.entries(datas)) {
+      // Build an object with all subkeys before pushing
+      let merged = {
+        ingredientsData: null,
+        directionsData: null,
+        titlesData: null,
+      };
+
+      // Inner loop: fill in each subkey
+      for (let [subkey, subvalue] of Object.entries(value)) {
+        if (subkey === "ingredients") {
+          merged.ingredientsData = subvalue;
+        }
+        if (subkey === "directions") {
+          merged.directionsData = subvalue;
+        }
+        if (subkey === "titles") {
+          merged.titlesData = subvalue;
+        }
       }
-      if (value === "directions") {
-        directionData = value;
-      }
-      if (value === "titles") {
-        console.log("titles: ", value);
-        titlesData = value;
-      }
+
+      // Now push once per "recipe block"
+      aiResults_raw_list.push(merged);
     }
 
-    if (!ingredientsData || !directionData || !titlesData) {
-      console.log(
-        "ingredientsData: ",
-        ingredientsData,
-        "directionsData :",
-        directionData,
-        "titleData: ",
-        titlesData
-      );
-      console.log("Data not defined");
-      throw new Error("Nothing parsed");
-    }
+    // Now parse each item in aiResults_raw_list
+    for (let item of aiResults_raw_list) {
+      // Make sure item.directionsData exists and has .ids
+      if (!item.directionsData?.ids) {
+        continue;
+      }
 
-    // Loop through the recipes
-    for (let i = 0; i < directionData.ids.length; i++) {
-      const directionItem = {
-        id: directionData.ids[i],
-        document: directionData.documents[i],
-        metadatas: directionData.metadatas[i],
-      };
-      const titleItem = {
-        id: titlesData.ids[i],
-        document: titlesData.documents[i],
-      };
+      for (let i = 0; i < item.directionsData.ids.length; i++) {
+        const directionItem = {
+          id: item.directionsData.ids[i],
+          document: item.directionsData.documents[i],
+          metadatas: item.directionsData.metadatas[i],
+        };
+        const titleItem = {
+          id: item.titlesData?.ids?.[i],
+          document: item.titlesData?.documents?.[i],
+        };
 
-      // ingredientsData.documents is assumed to be a nested array.
-      // Adjust indexing logic if the structure differs.
-      const ingredientItem = ingredientsData.documents[0][i];
+        // ingredientsData.documents is assumed a nested array
+        const ingredientItem =
+          item.ingredientsData?.documents?.[0]?.[i] ?? "[]";
 
-      // Parse JSON fields if they are JSON strings
-      const directions = JSON.parse(directionItem.document);
-      const ingredients = JSON.parse(ingredientItem);
+        // Parse JSON strings (fallback to [] if missing)
+        const directions = JSON.parse(directionItem.document ?? "[]");
+        const ingredients = JSON.parse(ingredientItem ?? "[]");
 
-      const recipe = {
-        id: directionItem.id,
-        title: titleItem.document,
-        directions: directions,
-        link: directionItem.metadatas.link,
-        ingredients: ingredients,
-      };
-      recipesList.push(recipe);
+        const recipe = {
+          id: directionItem.id,
+          title: titleItem?.document ?? "",
+          directions,
+          link: directionItem.metadatas?.link ?? "",
+          ingredients,
+        };
+
+        recipesList.push(recipe);
+      }
     }
 
     return recipesList;
