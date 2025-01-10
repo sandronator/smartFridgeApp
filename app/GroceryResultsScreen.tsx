@@ -45,45 +45,56 @@ export default function GroceryResultsScreen() {
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => {
           console.log("item: ", item);
-  
+
           // Handle product image
-          let imageUrl = item.productImage ?? null;
-  
+          const imageUrl = item.productImage ?? null;
+
           // Handle discounted price
           const discountedPrice = item.discountedPrice
             ? parseFloat(item.discountedPrice)
             : 0;
-  
+
           // Handle original price
           const originalPrice = item.originalPrice
             ? parseFloat(item.originalPrice)
             : 0;
-  
+
           // Handle discount percentage
-          const discountPercentage = item.discountPercentage ?? null;
-  
+          const discountPercentage = item.discountedPercentage ?? null;
+
           // Handle title
           const title = item.title ?? null;
-  
+
           // Handle slug
           const slug = item.slug ?? null;
-  
-          // Handle vendor
-          let vendor = item.vendor ?? null;
-  
+
+          // Handle vendor (previously 'source')
+          const vendor = item.source ?? null;
+
           // Handle click-out URL
-          let clickOutUrl = item.clickOutUrl ?? "https://en.wikipedia.org/wiki/HTTP_404";
-  
+          // nullify it if it’s one of the placeholders or "None"
+          let clickOutUrl = item.clickOutUrl;
+          if (
+            !clickOutUrl ||
+            clickOutUrl === "None" ||
+            clickOutUrl === "https://en.wikipedia.org/wiki/HTTP_404"
+          ) {
+            clickOutUrl = null;
+          }
+
           return (
             <View style={styles.itemContainer}>
               {/* Conditionally display title */}
               {title && <Text style={styles.title}>{title}</Text>}
-  
+
+              {/* Display vendor under the title as "Markt: vendor" */}
+              {vendor && <Text style={styles.vendor}>Markt: {vendor}</Text>}
+
               {/* Conditionally display image */}
               {imageUrl && (
                 <Image source={{ uri: imageUrl }} style={styles.image} />
               )}
-  
+
               {/* Conditionally display price information */}
               {(discountedPrice || originalPrice) && (
                 <View style={styles.priceContainer}>
@@ -99,27 +110,14 @@ export default function GroceryResultsScreen() {
                   )}
                 </View>
               )}
-  
-              {/* Conditionally display vendor information */}
-              {vendor && (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginVertical: 4,
-                  }}
-                >
-                  <Text>{vendor}</Text>
-                </View>
-              )}
-  
-              {/* Conditionally display discount percentage */}
+
+              {/* Conditionally display discount percentage (in black) */}
               {discountPercentage && (
                 <Text style={styles.discountPercentage}>
                   Save {discountPercentage}%
                 </Text>
               )}
-  
+
               {/* View Product Button */}
               {slug && (
                 <Button
@@ -129,8 +127,8 @@ export default function GroceryResultsScreen() {
                   }
                 />
               )}
-  
-              {/* Vendor Page Button */}
+
+              {/* Vendor Page Button — only if there's a valid link */}
               {clickOutUrl && (
                 <Button
                   title="View Vendor Page"
@@ -143,8 +141,7 @@ export default function GroceryResultsScreen() {
       />
     </View>
   );
-};
-  
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -160,6 +157,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
+  },
+  // New style for the vendor text
+  vendor: {
+    fontSize: 14,
+    marginBottom: 8,
   },
   image: {
     width: "100%",
@@ -181,9 +183,10 @@ const styles = StyleSheet.create({
     color: "gray",
     textDecorationLine: "line-through",
   },
+  // Updated discountPercentage style: remove red color, keep it simpler
   discountPercentage: {
     fontSize: 14,
-    color: "red",
+    color: "black",
     marginVertical: 4,
   },
 });

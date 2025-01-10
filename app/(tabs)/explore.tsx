@@ -1,5 +1,3 @@
-// app/(tabs)/TabTwoScreen.tsx
-
 import React, { useState, useContext } from "react";
 import {
   StyleSheet,
@@ -35,6 +33,12 @@ export default function TabTwoScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Nearby vendors list: expanded by default
+  const [showNearbyVendors, setShowNearbyVendors] = useState<boolean>(true);
+
+  // Cheapest items list: expanded by default
+  const [showCheapestItems, setShowCheapestItems] = useState<boolean>(true);
+
   // Add state for selected search type
   const [searchType, setSearchType] = useState<
     "normal" | "cheapest" | "nearby"
@@ -44,7 +48,9 @@ export default function TabTwoScreen() {
   const [cheapestTriggered, setCheapestTriggered] = useState(false);
   const [cheapValidItems, setCheapValidItems] = useState<any[]>([]);
 
-  //Fetch list of vendors and display on nearby otherwise empty the list of vendors
+  // ------------------------------------------
+  //  handleSearchType
+  // ------------------------------------------
   const handleSearchType = async (searchType: string) => {
     switch (searchType.toLowerCase()) {
       case "nearby":
@@ -58,7 +64,7 @@ export default function TabTwoScreen() {
 
         const geoLocation = [location.longitude, location.latitude];
         const response = await fetch(
-          "https://43e0-212-95-5-3.ngrok-free.app/nearestVendors",
+          "https://ed2a-213-142-96-15.ngrok-free.app/nearestVendors",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -94,31 +100,34 @@ export default function TabTwoScreen() {
     }
   };
 
-  //Helper function for removing vendor on nearby Search
+  // ------------------------------------------
+  //  Add / Remove vendors
+  // ------------------------------------------
   const addWantedVendor = (vendor: string) => {
     console.log("addvendor: ", vendor);
     setVendors((prevVendors) => {
       if (!prevVendors.includes(vendor)) {
-        return [...prevVendors, vendor]; // Add new vendor
+        return [...prevVendors, vendor];
       }
-      return prevVendors; // No changes if vendor already exists
+      return prevVendors;
     });
   };
 
-  //Helper function for removing vendor on nearby Search
   const removeVendor = (vendor: string) => {
     console.log("remove vendor: ", vendor);
     setVendors((prevVendor) => prevVendor.filter((v) => v !== vendor));
   };
-  // Function to fetch recipes from the API
+
+  // ------------------------------------------
+  //  fetchRecipes
+  // ------------------------------------------
   const fetchRecipes = async () => {
     setLoading(true);
-    setCheapestTriggered(false); // reset before each fetch
+    setCheapestTriggered(false);
+
     try {
-      // Extract item names from state
       const itemNames = state.items.map((item) => item.name);
       let response;
-      let data;
       const location = await getLocation();
       if (!location) {
         setLoading(false);
@@ -128,41 +137,25 @@ export default function TabTwoScreen() {
 
       if (searchType === "normal") {
         setCheapestTriggered(false);
-        // Normal search using /receipe endpoint
         response = await fetch(
-          "https://43e0-212-95-5-3.ngrok-free.app/receipe",
+          "https://ed2a-213-142-96-15.ngrok-free.app/receipe",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ items: itemNames }),
           }
         );
-        data = await response.json();
-
-        // Parse the API response
+        const data = await response.json();
         const parsedRecipes = parseApiResponse(data);
         console.log("parsedReceipes: ", parsedRecipes);
         setRecipes(parsedRecipes);
       } else if (searchType === "cheapest") {
         setCheapestTriggered(true);
-        console.log(
-          "cheapestvaliditems: ",
-          cheapValidItems,
-          "cheapestvalidtriggered: ",
-          cheapestTriggered
-        );
-        // Cheapest search using /cheapest endpoint
-        // Get user's location
-
         response = await fetch(
-          "https://43e0-212-95-5-3.ngrok-free.app/cheapest",
+          "https://ed2a-213-142-96-15.ngrok-free.app/cheapest",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               geoLocation: geoLocation,
               items: itemNames,
@@ -180,7 +173,7 @@ export default function TabTwoScreen() {
           })
         );
         response = await fetch(
-          "https://43e0-212-95-5-3.ngrok-free.app/nearby",
+          "https://ed2a-213-142-96-15.ngrok-free.app/nearby",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -203,6 +196,9 @@ export default function TabTwoScreen() {
     }
   };
 
+  // ------------------------------------------
+  //  parseEndpointV2
+  // ------------------------------------------
   const parseEndpointV2 = async (req: Response) => {
     const data = await req.json();
     console.log("data v2: ", data);
@@ -215,21 +211,20 @@ export default function TabTwoScreen() {
     setRecipes(serilizeReceipes);
   };
 
-  // Function to parse the API response for normal search
-  const parseApiResponse = (datas) => {
-    let recipesList = [];
-    let aiResults_raw_list = [];
+  // ------------------------------------------
+  //  parseApiResponse
+  // ------------------------------------------
+  const parseApiResponse = (datas: any) => {
+    let recipesList: any[] = [];
+    let aiResults_raw_list: any[] = [];
 
-    // Outer loop: for each "recipe block" in datas
-    for (let [key, value] of Object.entries(datas)) {
-      // Build an object with all subkeys before pushing
+    for (let [_, value] of Object.entries(datas)) {
       let merged = {
         ingredientsData: null,
         directionsData: null,
         titlesData: null,
       };
 
-      // Inner loop: fill in each subkey
       for (let [subkey, subvalue] of Object.entries(value)) {
         if (subkey === "ingredients") {
           merged.ingredientsData = subvalue;
@@ -241,17 +236,11 @@ export default function TabTwoScreen() {
           merged.titlesData = subvalue;
         }
       }
-
-      // Now push once per "recipe block"
       aiResults_raw_list.push(merged);
     }
 
-    // Now parse each item in aiResults_raw_list
     for (let item of aiResults_raw_list) {
-      // Make sure item.directionsData exists and has .ids
-      if (!item.directionsData?.ids) {
-        continue;
-      }
+      if (!item.directionsData?.ids) continue;
 
       for (let i = 0; i < item.directionsData.ids.length; i++) {
         const directionItem = {
@@ -263,12 +252,9 @@ export default function TabTwoScreen() {
           id: item.titlesData?.ids?.[i],
           document: item.titlesData?.documents?.[i],
         };
-
-        // ingredientsData.documents is assumed a nested array
         const ingredientItem =
           item.ingredientsData?.documents?.[0]?.[i] ?? "[]";
 
-        // Parse JSON strings (fallback to [] if missing)
         const directions = JSON.parse(directionItem.document ?? "[]");
         const ingredients = JSON.parse(ingredientItem ?? "[]");
 
@@ -287,31 +273,9 @@ export default function TabTwoScreen() {
     return recipesList;
   };
 
-  // Function to parse the Nearby API response
-  const parseNearbyApiResponse = (data: any) => {
-    try {
-      const recipesList: any[] = [];
-      for (const [id, item] of Object.entries(data)) {
-        const recipe = {
-          id: id,
-          title: item.name,
-          link: item.url,
-          price: item.price,
-          vendor: item.vendor,
-          ingredients: item.ingredients,
-          directions: item.directions,
-          titles: item.titles,
-        };
-        recipesList.push(recipe);
-      }
-      return recipesList;
-    } catch (error) {
-      console.error("Error parsing Nearby API response:", error);
-      return [];
-    }
-  };
-
-  // *** IMPORTANT: Return the valid items from validFilter ***
+  // ------------------------------------------
+  //  validFilter
+  // ------------------------------------------
   const validFilter = (data: any[]) => {
     console.log("data: ", data);
     if (!data || !Array.isArray(data)) return [];
@@ -323,7 +287,9 @@ export default function TabTwoScreen() {
     return validItems;
   };
 
-  // Function to check if an ingredient is in the user's items
+  // ------------------------------------------
+  //  hasIngredient
+  // ------------------------------------------
   const hasIngredient = (ingredient: string) => {
     const normalizedIngredient = ingredient.toLowerCase().trim();
     return state.items.some((item) => {
@@ -332,7 +298,9 @@ export default function TabTwoScreen() {
     });
   };
 
-  // Function to toggle expanded items
+  // ------------------------------------------
+  //  toggleItem
+  // ------------------------------------------
   const toggleItem = (index: number) => {
     const newExpandedItems = new Set(expandedItems);
     if (newExpandedItems.has(index)) {
@@ -343,12 +311,16 @@ export default function TabTwoScreen() {
     setExpandedItems(newExpandedItems);
   };
 
-  // Function to open the recipe link
+  // ------------------------------------------
+  //  openLink
+  // ------------------------------------------
   const openLink = (url: string) => {
     Linking.openURL(url.startsWith("http") ? url : `http://${url}`);
   };
 
-  // Function to get user's location
+  // ------------------------------------------
+  //  getLocation
+  // ------------------------------------------
   const getLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -367,7 +339,9 @@ export default function TabTwoScreen() {
     }
   };
 
-  // Function to parse HTML from the document page using fast-html-parser
+  // ------------------------------------------
+  //  parseDocumentHtml
+  // ------------------------------------------
   const parseDocumentHtml = (html: string) => {
     let discountedPrice;
     let normalPrice;
@@ -401,7 +375,9 @@ export default function TabTwoScreen() {
     return { title, discountedPrice, normalPrice, imageUrl, offerUrl, validTo };
   };
 
-  // Function to handle search for an ingredient
+  // ------------------------------------------
+  //  searchForGroccerie
+  // ------------------------------------------
   const searchForGroccerie = async (ingredient: string) => {
     try {
       setLoading(true);
@@ -412,14 +388,11 @@ export default function TabTwoScreen() {
       }
       const geoLocation = [location.longitude, location.latitude];
 
-      // Make the POST request to the grocerie endpoint
       const response = await fetch(
-        "https://43e0-212-95-5-3.ngrok-free.app/grocerie",
+        "https://ed2a-213-142-96-15.ngrok-free.app/grocerie",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             wantedItem: ingredient,
             geoLocation: geoLocation,
@@ -428,7 +401,6 @@ export default function TabTwoScreen() {
       );
       const data = await response.json();
 
-      // Process the response, get the documents
       const metadatas = data.metadatas[0];
       return metadatas;
     } catch (error) {
@@ -436,16 +408,21 @@ export default function TabTwoScreen() {
     }
   };
 
+  // ------------------------------------------
+  //  handleSearchIngredient
+  // ------------------------------------------
   const handleSearchIngredient = async (ingredient: string) => {
     const grocceryDetails = await searchForGroccerie(ingredient);
     // Set documentDetails in context
     updateDocumentDetails(grocceryDetails);
-
-    // Navigate to GroceryResultsScreen without passing params
+    // Navigate to GroceryResultsScreen
     router.push("/GroceryResultsScreen");
     setLoading(false);
   };
 
+  // ------------------------------------------
+  //  Render
+  // ------------------------------------------
   return (
     <ThemedView style={styles.container}>
       <ThemedText style={styles.margin}></ThemedText>
@@ -481,41 +458,67 @@ export default function TabTwoScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Fetch Recipes Button */}
+      {/* Button that only shows if getFindSearchButton is true */}
       {getFindSearchButton && (
-        <Button title="Find Recipes" onPress={fetchRecipes}></Button>
+        <Button title="Find Recipes" onPress={fetchRecipes} />
       )}
 
+      {/* Loading Indicator */}
       {loading && <ActivityIndicator size="large" style={styles.loading} />}
 
-      {getVendorsCopy.length > 0 &&
-        getVendorsCopy.map((vendor) => {
-          return (
-            <BouncyCheckbox
-              text={vendor}
-              key={vendor}
-              onPress={() => {
-                if (getVendors.includes(vendor)) {
-                  removeVendor(vendor);
-                } else {
-                  addWantedVendor(vendor);
-                }
-              }}
-              textStyle={{ textDecorationLine: "none" }}
-              size={30}
-              iconStyle={{ borderColor: "#00ff00" }}
-              style={{
-                marginBottom: 4.5,
-                display: "flex",
-                flexDirection: "row",
-                flexWrap: "wrap",
-                justifyContent: "space-between",
-              }}
-              fillColor="#007bff"
-            ></BouncyCheckbox>
-          );
-        })}
+      {/* 
+        If 'nearby' mode and vendors exist, 
+        display a small title "Markets" (opacity 50%) plus arrow icon.
+        Default expanded: showNearbyVendors = true
+      */}
+      {searchType === "nearby" && getVendorsCopy.length > 0 && (
+        <>
+          <TouchableOpacity
+            style={[styles.arrowContainer, styles.arrowRow]}
+            onPress={() => setShowNearbyVendors((prev) => !prev)}
+          >
+            <Text style={styles.labelOpacity}>Markets</Text>
+            {showNearbyVendors ? (
+              <Ionicons name="chevron-up" size={24} color="black" />
+            ) : (
+              <Ionicons name="chevron-down" size={24} color="black" />
+            )}
+          </TouchableOpacity>
 
+          {/* Conditionally render the vendor checkboxes if expanded */}
+          {showNearbyVendors && (
+            <View style={styles.checkboxContainer}>
+              {getVendorsCopy.map((vendor) => {
+                return (
+                  <BouncyCheckbox
+                    text={vendor}
+                    key={vendor}
+                    onPress={() => {
+                      if (getVendors.includes(vendor)) {
+                        removeVendor(vendor);
+                      } else {
+                        addWantedVendor(vendor);
+                      }
+                    }}
+                    textStyle={{ textDecorationLine: "none" }}
+                    size={30}
+                    iconStyle={{ borderColor: "#00ff00" }}
+                    style={{
+                      marginBottom: 4.5,
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      justifyContent: "space-between",
+                    }}
+                    fillColor="#007bff"
+                  />
+                );
+              })}
+            </View>
+          )}
+        </>
+      )}
+
+      {/* Recipe List */}
       <FlatList
         data={recipes}
         keyExtractor={(item) => item.id}
@@ -536,7 +539,7 @@ export default function TabTwoScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Expanded details */}
+            {/* Expanded section for each recipe */}
             {expandedItems.has(index) && (
               <View style={styles.expandedContent}>
                 <ThemedText style={styles.sectionTitle}>
@@ -579,36 +582,59 @@ export default function TabTwoScreen() {
                   onPress={() => openLink(item.link)}
                 />
 
-                {/* Conditionally render cheapest items if triggered */}
-
+                {/* 
+                  Expand/Collapse for cheapest valid items (if available).
+                  Title "Bestfit" at 50% opacity, arrow icon, expanded by default.
+                */}
                 {cheapestTriggered && cheapValidItems.length > 0 && (
-                  <View style={{ marginTop: 15 }}>
-                    <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
-                      Cheapest Valid Items:
-                    </Text>
-                    {cheapValidItems.map((validItem, vIndex) => (
-                      <View key={vIndex} style={styles.card}>
-                        <Image
-                          source={{ uri: validItem.productImage }}
-                          style={styles.image}
-                        />
-                        <Text style={styles.title}>{validItem.title}</Text>
-                        <Text>Vendor: {validItem.vendor}</Text>
-                        <Text>
-                          Discounted Price: ${validItem.discountedPrice}
-                        </Text>
-                        <Text>
-                          Discount Percentage: {validItem.discountedPercentage}%
-                        </Text>
-                        <Text
-                          style={styles.link}
-                          onPress={() => Linking.openURL(validItem.clickOutUrl)}
-                        >
-                          View Product
-                        </Text>
+                  <>
+                    <TouchableOpacity
+                      style={[
+                        styles.arrowContainer,
+                        styles.arrowRow,
+                        { marginTop: 10 },
+                      ]}
+                      onPress={() => setShowCheapestItems((prev) => !prev)}
+                    >
+                      <Text style={styles.labelOpacity}>Bestfit</Text>
+                      {showCheapestItems ? (
+                        <Ionicons name="chevron-up" size={24} color="black" />
+                      ) : (
+                        <Ionicons name="chevron-down" size={24} color="black" />
+                      )}
+                    </TouchableOpacity>
+
+                    {showCheapestItems && (
+                      <View style={{ marginTop: 15 }}>
+                        {cheapValidItems.map((validItem, vIndex) => (
+                          <View key={vIndex} style={styles.card}>
+                            <Image
+                              source={{ uri: validItem.productImage }}
+                              style={styles.image}
+                            />
+                            <Text style={styles.title}>{validItem.title}</Text>
+                            <Text>Vendor: {validItem.vendor}</Text>
+                            {/* Use € instead of $ */}
+                            <Text>
+                              Discounted Price: €{validItem.discountedPrice}
+                            </Text>
+                            <Text>
+                              Discount Percentage:{" "}
+                              {validItem.discountedPercentage}%
+                            </Text>
+                            <Text
+                              style={styles.link}
+                              onPress={() =>
+                                Linking.openURL(validItem.clickOutUrl)
+                              }
+                            >
+                              View Product
+                            </Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
-                  </View>
+                    )}
+                  </>
                 )}
               </View>
             )}
@@ -650,6 +676,27 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
+
+  // Arrow container & text
+  arrowContainer: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    marginTop: 8,
+  },
+  arrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  labelOpacity: {
+    opacity: 0.5,
+    marginRight: 6, // space between text and arrow
+  },
+
+  checkboxContainer: {
+    marginVertical: 8,
+  },
+
   itemContainer: {
     borderBottomWidth: 1,
     borderBottomColor: "#ccc",
