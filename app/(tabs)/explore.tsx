@@ -64,14 +64,13 @@ export default function TabTwoScreen() {
 
         const geoLocation = [location.longitude, location.latitude];
         const response = await fetch(
-          "https://ed2a-213-142-96-15.ngrok-free.app/nearestVendors",
+          "http://85.215.106.90:8000/nearestVendors",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ geoLocation: geoLocation }),
           }
         );
-
         const vendors = await response.json();
         console.log("vendors: ", vendors);
         setVendors([]);
@@ -137,31 +136,25 @@ export default function TabTwoScreen() {
 
       if (searchType === "normal") {
         setCheapestTriggered(false);
-        response = await fetch(
-          "https://ed2a-213-142-96-15.ngrok-free.app/receipe",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ items: itemNames }),
-          }
-        );
+        response = await fetch("http://85.215.106.90:8000/receipe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: itemNames }),
+        });
         const data = await response.json();
         const parsedRecipes = parseApiResponse(data);
         console.log("parsedReceipes: ", parsedRecipes);
         setRecipes(parsedRecipes);
       } else if (searchType === "cheapest") {
         setCheapestTriggered(true);
-        response = await fetch(
-          "https://ed2a-213-142-96-15.ngrok-free.app/cheapest",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              geoLocation: geoLocation,
-              items: itemNames,
-            }),
-          }
-        );
+        response = await fetch("http://85.215.106.90:8000/cheapest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            geoLocation: geoLocation,
+            items: itemNames,
+          }),
+        });
         parseEndpointV2(response);
       } else if (searchType === "nearby") {
         setCheapestTriggered(false);
@@ -172,20 +165,17 @@ export default function TabTwoScreen() {
             model: { geoLocation: geoLocation, items: itemNames },
           })
         );
-        response = await fetch(
-          "https://ed2a-213-142-96-15.ngrok-free.app/nearby",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              vendors: getVendors,
-              model: {
-                geoLocation: geoLocation,
-                items: itemNames,
-              },
-            }),
-          }
-        );
+        response = await fetch("http://85.215.106.90:8000/nearby", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vendors: getVendors,
+            model: {
+              geoLocation: geoLocation,
+              items: itemNames,
+            },
+          }),
+        });
         parseEndpointV2(response);
       }
     } catch (error) {
@@ -387,18 +377,14 @@ export default function TabTwoScreen() {
         return;
       }
       const geoLocation = [location.longitude, location.latitude];
-
-      const response = await fetch(
-        "https://ed2a-213-142-96-15.ngrok-free.app/grocerie",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wantedItem: ingredient,
-            geoLocation: geoLocation,
-          }),
-        }
-      );
+      const response = await fetch("http://85.215.106.90:8000/grocerie", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wantedItem: ingredient,
+          geoLocation: geoLocation,
+        }),
+      });
       const data = await response.json();
 
       const metadatas = data.metadatas[0];

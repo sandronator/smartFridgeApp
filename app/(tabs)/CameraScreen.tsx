@@ -41,7 +41,7 @@ export default function CameraScreen() {
 
     console.log("scanning.current (should be true):", scanning.current);
 
-    fetch("https://1772-213-142-96-15.ngrok-free.app/scrape", {
+    fetch("http://85.215.106.90:9000/scrape", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
